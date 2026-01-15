@@ -1,0 +1,143 @@
+services:
+  # --- MINIO: OBJECT STORAGE (BRONZE/SILVER/GOLD) ---
+  minio:
+    image: minio/minio
+    platform: linux/amd64
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - spark-network
+
+  # --- MINIO INIT: TỰ ĐỘNG TẠO BUCKET ---
+  minio-init:
+    image: minio/mc
+    platform: linux/amd64
+    container_name: minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 admin password123;
+      /usr/bin/mc mb myminio/bronze;
+      /usr/bin/mc mb myminio/silver;
+      /usr/bin/mc mb myminio/gold;
+      exit 0;
+      "
+    networks:
+      - spark-network
+
+  # --- POSTGRES: SERVING LAYER CHO POWER BI ---
+  postgres:
+    image: postgres:15
+    platform: linux/amd64
+    container_name: postgres
+    environment:
+      POSTGRES_DB: analytics
+      POSTGRES_USER: spark_user
+      POSTGRES_PASSWORD: spark_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - spark-network
+
+  spark-master:
+    image: apache/spark
+    platform: linux/amd64
+    container_name: spark-master
+    hostname: spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    volumes:
+      - ./spark-apps:/opt/spark-apps
+      - ./spark-data:/opt/spark-data
+      - ./spark-events:/opt/spark/spark-events
+      - ./conf:/opt/spark/conf
+      - type: bind
+        source: ./jars/postgresql-42.7.8.jar
+        target: /opt/spark/jars/postgresql-42.7.8.jar
+      - type: bind
+        source: ./jars/hadoop-aws-3.3.4.jar
+        target: /opt/spark/jars/hadoop-aws-3.3.4.jar
+      - type: bind
+        source: ./jars/aws-java-sdk-bundle-1.12.262.jar
+        target: /opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar
+    networks:
+      - spark-network
+
+  spark-worker:
+    image: apache/spark
+    platform: linux/amd64
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=4g
+    volumes:
+      - ./spark-apps:/opt/spark-apps
+      - ./spark-data:/opt/spark-data
+      - ./spark-events:/opt/spark/spark-events
+      - ./conf:/opt/spark/conf
+      - type: bind
+        source: ./jars/postgresql-42.7.8.jar
+        target: /opt/spark/jars/postgresql-42.7.8.jar
+      - type: bind
+        source: ./jars/hadoop-aws-3.3.4.jar
+        target: /opt/spark/jars/hadoop-aws-3.3.4.jar
+      - type: bind
+        source: ./jars/aws-java-sdk-bundle-1.12.262.jar
+        target: /opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar
+    depends_on:
+      - spark-master
+      - postgres
+    networks:
+      - spark-network
+    deploy:
+      replicas: 2
+
+  spark-history:
+    image: apache/spark
+    platform: linux/amd64
+    container_name: spark-history
+    hostname: spark-history
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.history.HistoryServer
+    environment:
+      - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=/opt/spark/spark-events -Dspark.history.ui.port=18080
+      - SPARK_NO_DAEMONIZE=true
+    ports:
+      - "18080:18080"
+    volumes:
+      - ./spark-events:/opt/spark/spark-events
+    networks:
+      - spark-network
+    depends_on:
+      - spark-master
+    restart: unless-stopped
+
+networks:
+  spark-network:
+    driver: bridge
+
+volumes:
+  minio_data:
+  postgres_data:
