@@ -15,3 +15,12 @@ Build and start container:
 ```bash
 docker compose up -d
 ```
+
+
+## Run Spark
+
+```bash
+docker exec -it spark-master /opt/spark/bin/spark-submit \
+--master spark://spark-master:7077 \
+/opt/spark-apps/bronze/traffic_bronze_ingest.py
+```

@@ -57,7 +57,7 @@ services:
       - spark-network
 
   spark-master:
-    image: apache/spark
+    build: .
     platform: linux/amd64
     container_name: spark-master
     hostname: spark-master
@@ -87,7 +87,7 @@ services:
       - spark-network
 
   spark-worker:
-    image: apache/spark
+    build: .
     platform: linux/amd64
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:

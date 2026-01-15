@@ -1,5 +1,6 @@
 .DS_Store
-dataset
+spark-data
+spark-events
 .env
 jars
 *.jar
