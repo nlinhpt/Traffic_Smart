@@ -17,20 +17,39 @@ def process_fact_traffic(df_silver, dim_location,dim_owner, dim_weather):
     ).drop(dim_owner.owner_name).drop(dim_owner.phone).drop(dim_owner.email)
 
 
-    # Join with dim_location to get road_id (focus on current location)
-    df_joined = df_joined.join(
-        dim_location,
-        (df_joined.road_street == dim_location.street) & 
-        (df_joined.road_district == dim_location.district) & 
-        (df_joined.road_city == dim_location.city) &
-        (df_joined.longitude == dim_location.longitude) & 
-        (df_joined.latitude == dim_location.latitude) &
-        (dim_location.location_type == "current"),
-        "left"
-    ).drop(dim_location.street).drop(dim_location.district).drop(dim_location.city)
-   
+    # Join with dim_location to get 
+    
+    # cur_location_id
+    cur_loc = dim_location.select(
+    col("location_id").alias("cur_location_id"),
+    col("street").alias("cur_street"),
+    col("district").alias("cur_district"),
+    col("city").alias("cur_city")
+    )   
 
-    #### 
+    df_joined  = df_joined .join(
+        cur_loc,
+        ( df_joined.road_street == cur_loc.cur_street) &
+        (df_joined.road_district == cur_loc.cur_district) &
+        (df_joined.road_city == cur_loc.cur_city),
+        "left"
+    ).drop(cur_loc.cur_street).drop(cur_loc.cur_district).drop(cur_loc.cur_city)
+    
+    # dest_location
+    dest_loc = dim_location.select(
+        col("location_id").alias("dest_location_id"),
+        col("street").alias("dest_street"),
+        col("district").alias("dest_district"),
+        col("city").alias("dest_city")
+    )
+    df_joined = df_joined.join(
+        dest_loc,
+        (df_joined.destination_street == dest_loc.dest_street) &
+        (df_joined.destination_district == dest_loc.dest_district) &
+        (df_joined.destination_city == dest_loc.dest_city),
+        "left"
+    ).drop(dest_loc.dest_street).drop(dest_loc.dest_district).drop(dest_loc.dest_city)
+    
    
     
     
@@ -48,7 +67,8 @@ def process_fact_traffic(df_silver, dim_location,dim_owner, dim_weather):
         col("timestamp").alias("time_id"),
         col("vehicle_id"), 
         col("owner_id"), # add owner_id
-        col("location_id"),
+        col("cur_location_id"),
+        col("dest_location_id"),
         col("weather_id"),
         col("speed_kmph").cast(FloatType()),
         col("rpm").cast(IntegerType()),
@@ -60,7 +80,8 @@ def process_fact_traffic(df_silver, dim_location,dim_owner, dim_weather):
             .when(col("congestion_level") == "Heavy", 4)
             .otherwise(0).cast(IntegerType()).alias("congestion_score"
         ),
-        col("estimated_delay_minutes").cast(IntegerType())
+        col("estimated_delay_minutes").cast(IntegerType()),
+        col("eta")
     )
 
     write_to_gold(df_fact, "fact_traffic", "append")
@@ -68,7 +89,7 @@ def process_fact_traffic(df_silver, dim_location,dim_owner, dim_weather):
     
     # Aggregation: Hourly Average Speed and Traffic Count per Road
     print("Processing Fact_Traffic Aggregation (Hourly Metrics)...")
-    df_agg = df_fact.groupBy("location_id", "time_id") \
+    df_agg = df_fact.groupBy("cur_location_id", "time_id") \
         .agg(
             avg("speed_kmph").alias("avg_speed"),
             avg("congestion_score").alias("avg_congestion"),

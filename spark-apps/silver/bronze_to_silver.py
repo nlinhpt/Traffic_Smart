@@ -15,7 +15,7 @@ MINIO_ACCESS_KEY = "admin"
 MINIO_SECRET_KEY = "password123"
 
 # Paths
-BRONZE_PATH = "s3a://bronze/raw_sample/2026-01-15/traffic_data_1_sample.json"   # Reading all raw data "s3a://bronze/raw/*/*.json" #
+BRONZE_PATH =  "s3a://bronze/raw/2026-01-15/traffic_data_1.json" #Reading all raw data  "s3a://bronze/raw_sample/2026-01-15/traffic_data_1_sample.json"   # Reading all raw data "s3a://bronze/raw/*/*.json" #
 SILVER_PATH = "s3a://silver/traffic_data"
 METADATA_PATH = "s3a://silver/_metadata/processed_files"
 def create_spark_session():

@@ -8,6 +8,7 @@ def process_dim_owner(df_silver):
         "phone", 
         "email"
         )
+        .dropDuplicates(["owner_name", "phone", "email"])
     )
 
     dim_owner = df_owner.withColumn(
