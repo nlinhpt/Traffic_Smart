@@ -13,8 +13,6 @@ def process_dim_vehicle(df_silver):
         .withColumn("rn", row_number().over(w)) \
         .filter(col("rn") == 1) \
         .select(
-            # col("vehicle_id"),
-            # col("owner_name"),
             col("license_number"),
             col("vehicle_type"),
             col("vehicle_classification"),
@@ -23,11 +21,12 @@ def process_dim_vehicle(df_silver):
             col("vehicle_height").cast(FloatType())
         )
         
-    dim_vehicle = df_vehicle.withColumn(
-        "vehicle_id", monotonically_increasing_id()
-    ).dropDuplicates(["license_number"])
+    dim_vehicle = df_vehicle \
+        .dropDuplicates(["license_number"]) \
+        .withColumn("vehicle_sk", monotonically_increasing_id())
     
     write_to_gold(dim_vehicle, "dim_vehicle", "overwrite")
     write_to_postgres(dim_vehicle, "dim_vehicle", "overwrite")
     print(f"Dim_Vehicle completed: {dim_vehicle.count()} records")
 
+    return dim_vehicle

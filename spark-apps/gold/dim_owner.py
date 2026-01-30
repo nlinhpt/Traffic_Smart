@@ -12,7 +12,7 @@ def process_dim_owner(df_silver):
     )
 
     dim_owner = df_owner.withColumn(
-        "owner_id",
+        "owner_sk",
         monotonically_increasing_id()
     )
 

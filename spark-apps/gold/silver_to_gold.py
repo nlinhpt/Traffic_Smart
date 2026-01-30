@@ -13,6 +13,7 @@ from dim_weather import process_dim_weather
 from fact_traffic import process_fact_traffic
 from dim_owner import process_dim_owner
 
+
 def main():
     print("="*60)
     print("Starting Optimized Gold Layer ETL")
@@ -40,17 +41,18 @@ def main():
         
         # Dimension tables
         process_dim_time(df_silver)
-        process_dim_vehicle(df_silver)
+        dim_owner = process_dim_owner(df_silver)
+        dim_vehicle = process_dim_vehicle(df_silver)
         dim_location = process_dim_location(df_silver)
         dim_weather = process_dim_weather(df_silver)
-        dim_owner = process_dim_owner(df_silver)
+        
         dim_time = time.time() - dim_start
         print(f"✓ All dimensions completed ({dim_time:.2f}s)")
         
         # Fact table
         print("\n[3/6] Processing Fact Table...")
         fact_start = time.time()
-        process_fact_traffic(df_silver, dim_location,dim_owner, dim_weather)
+        process_fact_traffic(df_silver, dim_location, dim_weather, dim_owner, dim_vehicle)
         fact_time = time.time() - fact_start
         print(f"✓ Fact table completed ({fact_time:.2f}s)")
         

@@ -22,7 +22,7 @@ def process_dim_location(df_silver):
         .withColumn("postal_code", lit('00700')) \
         .withColumn("country", lit("Vietnam")) \
         .dropDuplicates() \
-        .withColumn("location_id", monotonically_increasing_id())
+        .withColumn("location_sk", monotonically_increasing_id())
 
     write_to_gold(dim_location, "dim_location", "overwrite")
     write_to_postgres(dim_location, "dim_location", "overwrite")

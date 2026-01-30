@@ -8,7 +8,7 @@ def process_dim_weather(df_silver):
         col("weather_condition"),
         col("temperature").cast(FloatType()),
         col("humidity").cast(FloatType())
-    ).distinct().withColumn("weather_id", monotonically_increasing_id())
+    ).distinct().withColumn("weather_sk", monotonically_increasing_id())
     
     write_to_gold(dim_weather, "dim_weather", "overwrite")
     write_to_postgres(dim_weather, "dim_weather", "overwrite")

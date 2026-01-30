@@ -7,12 +7,12 @@ def process_dim_time(df_silver):
     print("Processing Dim_Time...")
     dim_time = df_silver.select("timestamp").distinct() \
         .withColumn(
-            "time_id",
+            "time_sk",
             date_format(col("timestamp"), "yyyyMMddHH").cast(IntegerType())
         ) \
         .withColumn("date", to_timestamp(col("timestamp"))) \
         .select(
-            col("time_id"),
+            col("time_sk"),
             year("date").cast(IntegerType()).alias("year"),
             month("date").cast(IntegerType()).alias("month"),
             dayofmonth("date").cast(IntegerType()).alias("day"),
