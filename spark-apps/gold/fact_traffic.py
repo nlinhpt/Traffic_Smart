@@ -1,4 +1,4 @@
-from pyspark.sql.functions import col, when, avg, count, date_format
+from pyspark.sql.functions import col, when, avg, count, date_format, unix_timestamp
 from pyspark.sql.types import FloatType, IntegerType
 from common import write_to_postgres, write_to_gold
 
@@ -67,15 +67,16 @@ def process_fact_traffic(df_silver, dim_location, dim_weather, dim_owner, dim_ve
         .drop(dim_vehicle.vehicle_width) \
         .drop(dim_vehicle.vehicle_height)
         
-    # create time
-    df_joined = df_joined.withColumn(
-        "time_sk",
-        date_format(col("timestamp"), "yyyyMMddHH").cast(IntegerType())
-    )
+    # # create time
+    # df_joined = df_joined.withColumn(
+    #     "time_sk",
+    #     date_format(col("timestamp"), "yyyyMMddHH").cast(IntegerType())
+    # )
 
 
     # Select and cast measures
-    df_fact = df_joined.select(
+    df_fact = df_joined.withColumn("time_sk", unix_timestamp(col("timestamp")).cast(IntegerType()))\
+        .select(
         col("vehicle_id").alias("traffic_vehicle_id"),
         col("vehicle_sk"),
         col("owner_sk"), 
@@ -95,24 +96,20 @@ def process_fact_traffic(df_silver, dim_location, dim_weather, dim_owner, dim_ve
         ),
         col("estimated_delay_minutes").cast(IntegerType()),
         col("eta").alias("destination_eta")
-        # ) \
-        # .withColumn(
-        #     "time_sk",
-        #     date_format(col("timestamp"), "yyyyMMddHH").cast(IntegerType())
         )
 
     write_to_gold(df_fact, "fact_traffic", "append")
     write_to_postgres(df_fact, "fact_traffic", "append")
     
-    # Aggregation: Hourly Average Speed and Traffic Count per Road
-    print("Processing Fact_Traffic Aggregation (Hourly Metrics)...")
+    # Aggregation: Minute Average Speed and Traffic Count per Road
+    print("Processing Fact_Traffic Aggregation (Minute Metrics)...")
     df_agg = df_fact.groupBy("cur_location_sk", "time_sk") \
         .agg(
             avg("speed_kmph").alias("avg_speed"),
             avg("congestion_score").alias("avg_congestion"),
             count("traffic_vehicle_id").alias("traffic_count")
         )
-    write_to_gold(df_agg, "fact_traffic_hourly_agg", "overwrite")
-    write_to_postgres(df_agg, "fact_traffic_hourly_agg", "overwrite")
+    write_to_gold(df_agg, "fact_traffic_minute_agg", "overwrite")
+    write_to_postgres(df_agg, "fact_traffic_minute_agg", "overwrite")
     
     print(f"Fact_Traffic completed: {df_fact.count()} records, Aggregated: {df_agg.count()} records")

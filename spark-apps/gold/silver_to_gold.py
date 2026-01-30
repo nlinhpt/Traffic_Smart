@@ -40,7 +40,7 @@ def main():
         dim_start = time.time()
         
         # Dimension tables
-        process_dim_time(df_silver)
+        process_dim_time(spark)
         dim_owner = process_dim_owner(df_silver)
         dim_vehicle = process_dim_vehicle(df_silver)
         dim_location = process_dim_location(df_silver)
