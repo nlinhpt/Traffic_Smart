@@ -112,27 +112,25 @@ services:
       - postgres
     networks:
       - spark-network
-    deploy:
-      replicas: 2
 
-  spark-history:
-    image: apache/spark
-    platform: linux/amd64
-    container_name: spark-history
-    hostname: spark-history
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.history.HistoryServer
-    environment:
-      - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=/opt/spark/spark-events -Dspark.history.ui.port=18080
-      - SPARK_NO_DAEMONIZE=true
-    ports:
-      - "18080:18080"
-    volumes:
-      - ./spark-events:/opt/spark/spark-events
-    networks:
-      - spark-network
-    depends_on:
-      - spark-master
-    restart: unless-stopped
+  # spark-history:
+  #   image: apache/spark
+  #   platform: linux/amd64
+  #   container_name: spark-history
+  #   hostname: spark-history
+  #   command: /opt/spark/bin/spark-class org.apache.spark.deploy.history.HistoryServer
+  #   environment:
+  #     - SPARK_HISTORY_OPTS=-Dspark.history.fs.logDirectory=/opt/spark/spark-events -Dspark.history.ui.port=18080
+  #     - SPARK_NO_DAEMONIZE=true
+  #   ports:
+  #     - "18080:18080"
+  #   volumes:
+  #     - ./spark-events:/opt/spark/spark-events
+  #   networks:
+  #     - spark-network
+  #   depends_on:
+  #     - spark-master
+  #   restart: unless-stopped
 
 networks:
   spark-network:

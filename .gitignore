@@ -1,6 +1,6 @@
-.DS_Store
 spark-data
 spark-events
 .env
 jars
 *.jar
+traffic_data_1_sample.csv
